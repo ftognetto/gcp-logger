@@ -1,5 +1,5 @@
 {
-  "name": "@bigartwall/gcp-logger",
+  "name": "@quantos/gcp-logger",
   "version": "1.0.0",
   "description": "Quantos Gcp logger helper",
   "author": "fabriziotognetto <info@quantos.it>",
