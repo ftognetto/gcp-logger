@@ -1,10 +1,14 @@
 import winston from 'winston';
 import { LoggingWinston } from '@google-cloud/logging-winston';
-import { Response } from 'express';
+import { Request } from 'express';
 
 let loggingWinston: LoggingWinston;
 let logger: winston.Logger;
 
+// Consente di estrarre l'utente richiedente dalla request e scriverlo nei log
+let _extractUserFromRequest: (req: Request) => any | undefined;
+
+// Inizializzazione del logger
 const _initLogger = () => {
 
   // serviceContext se è valorizzato riporta gli errori anche su Error Reporting
@@ -27,7 +31,7 @@ const _initLogger = () => {
 
 // Metodo principale
 // Formatta e scrive i log
-const _handleLog = (log: Object | string | Error, severity: 'ERROR' | 'WARNING' | 'INFO', res?: Response)  => {
+const _handleLog = (log: Object | string | Error, severity: 'ERROR' | 'WARNING' | 'INFO', req?: Request, reqUser?: any)  => {
 
   if (!logger) { _initLogger(); }
 
@@ -36,31 +40,34 @@ const _handleLog = (log: Object | string | Error, severity: 'ERROR' | 'WARNING' 
 
   if (log instanceof Error || log instanceof Object) { metadata = log; }
   
-  if (res) {
-    if (res.req) {
-      message += `${res.req.method} ${res.req.protocol}://${res.req.get('host')}${res.req.originalUrl} - `;
-      metadata.httpRequest = {
-        status: severity === 'ERROR' ? 500 : severity === 'WARNING' ? 400 : 200,
-        requestUrl: `${res.req.protocol}://${res.req.get('host')}${res.req.originalUrl}`,
-        requestMethod: res.req.method,
-        remoteIp: res.req.socket.remoteAddress,
-        requestSize: res.req.socket.bytesRead
-      };
-      
-      if (res.req.headers) {
-        if (res.req.headers['user-agent']) { metadata.httpRequest.userAgent = res.req.headers['user-agent']; }
-        if (res.req.headers['baw-user']) {
-          const reqUser = Buffer.from(res.req.headers['baw-user'].toString(), 'base64').toString();
-          metadata.bawUser = JSON.parse(reqUser);
-        }
-        if (res.req.header('X-Cloud-Trace-Context')) {
-          const [trace] = res.req.header('X-Cloud-Trace-Context').split('/');
-          metadata.httpRequest[LoggingWinston.LOGGING_TRACE_KEY] = `projects/${process.env.PROJECT_ID}/traces/${trace}`;
-        }
-      }
+  if (req) {
+
+    message += `${req.method} ${req.protocol}://${req.hostname}${req.originalUrl} - `;
+
+    // Http request info
+    metadata.httpRequest = {
+      status: severity === 'ERROR' ? 500 : severity === 'WARNING' ? 400 : 200,
+      requestUrl: `${req.protocol}://${req.hostname}${req.originalUrl}`,
+      requestMethod: req.method,
+      remoteIp: req.socket.remoteAddress,
+      requestSize: req.socket.bytesRead,
+      userAgent: req.headers && req.headers['user-agent']
+    };
+
+    // Tracing
+    if (req.headers && req.headers['X-Cloud-Trace-Context']) {
+      const [trace] = `${req.headers['X-Cloud-Trace-Context']}`.split('/');
+      metadata.httpRequest[LoggingWinston.LOGGING_TRACE_KEY] = `projects/${process.env.PROJECT_ID}/traces/${trace}`;
     }
   }
 
+  if (reqUser) {
+    metadata.reqUser = reqUser;
+  }
+  else if (_extractUserFromRequest) {
+    metadata.reqUser = _extractUserFromRequest(req);
+  }
+  
   if (typeof(log) === 'string') { message += log; }
   else if (log instanceof Error) { message += log.message; }
   else { message += JSON.stringify(log, Object.getOwnPropertyNames(log)); }
@@ -75,13 +82,19 @@ const _handleLog = (log: Object | string | Error, severity: 'ERROR' | 'WARNING' 
 
 // exported - per chiamare il logger coome se fosse static
 export const GcpLogger = {
-  log(err: Object | string, res?: Response): void {
-    _handleLog(err, 'INFO', res);
+  log(log: Object | string, req?: Request): void {
+    _handleLog(log, 'INFO', req);
   },
-  warn(err: Object | string | Error, res?: Response): void {
-    _handleLog(err, 'WARNING', res);
+  warn(log: Object | string | Error, req?: Request): void {
+    _handleLog(log, 'WARNING', req);
   },
-  error(err: Error, res?: Response): void {
-    _handleLog(err, 'ERROR', res);
+  error(log: Error, req?: Request): void {
+    _handleLog(log, 'ERROR', req);
+  },
+  init(config: { extractUserFromRequest: (req: Request) => any }): void {
+    if (config.extractUserFromRequest) {
+      _extractUserFromRequest = config.extractUserFromRequest;
+    }
+    
   }
 };

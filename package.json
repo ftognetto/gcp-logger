@@ -1,6 +1,6 @@
 {
   "name": "@quantos/gcp-logger",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Quantos Gcp logger helper",
   "author": "fabriziotognetto <info@quantos.it>",
   "main": "dist/index.js",
