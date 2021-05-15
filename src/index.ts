@@ -82,14 +82,14 @@ const _handleLog = (log: Object | string | Error, severity: 'ERROR' | 'WARNING' 
 
 // exported - per chiamare il logger coome se fosse static
 export const GcpLogger = {
-  log(log: Object | string, req?: Request): void {
-    _handleLog(log, 'INFO', req);
+  log(log: Object | string, req?: Request, reqUser?: any): void {
+    _handleLog(log, 'INFO', req, reqUser);
   },
-  warn(log: Object | string | Error, req?: Request): void {
-    _handleLog(log, 'WARNING', req);
+  warn(log: Object | string | Error, req?: Request, reqUser?: any): void {
+    _handleLog(log, 'WARNING', req, reqUser);
   },
-  error(log: Error, req?: Request): void {
-    _handleLog(log, 'ERROR', req);
+  error(log: Error, req?: Request, reqUser?: any): void {
+    _handleLog(log, 'ERROR', req, reqUser);
   },
   init(config: { extractUserFromRequest: (req: Request) => any }): void {
     if (config.extractUserFromRequest) {
