@@ -1,8 +1,7 @@
 import { LoggingWinston } from '@google-cloud/logging-winston';
 import { Request } from 'express';
-import winston from 'winston';
+import * as winston from 'winston';
 
-let loggingWinston: LoggingWinston;
 let logger: winston.Logger;
 
 // Consente di estrarre l'utente richiedente dalla request e scriverlo nei log
@@ -14,7 +13,7 @@ const _initLogger = () => {
   // serviceContext se è valorizzato riporta gli errori anche su Error Reporting
   const serviceContext = _serviceName ? { service: _serviceName } : undefined;
 
-  loggingWinston = new LoggingWinston({
+  const loggingWinston = new LoggingWinston({
     serviceContext,
   });
 
@@ -24,10 +23,10 @@ const _initLogger = () => {
     transports.push(new winston.transports.Console());
   }
   transports.push(loggingWinston);
-
   logger = winston.createLogger({
     level: 'info',
     transports,
+    exitOnError: false,
   });
 };
 
@@ -103,9 +102,9 @@ export const GcpLogger = {
   error(log: Error | Object, req?: Request, reqUser?: any): void {
     _handleLog(log, 'ERROR', req, reqUser);
   },
-  init(config: { serviceName: string; extractUserFromRequest: (req: Request) => any }): void {
-    _serviceName = config.serviceName;
-    if (config.extractUserFromRequest) {
+  init(config?: { serviceName?: string; extractUserFromRequest?: (req: Request) => any }): void {
+    _serviceName = config?.serviceName;
+    if (config?.extractUserFromRequest) {
       _extractUserFromRequest = config.extractUserFromRequest;
     }
   },
