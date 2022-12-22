@@ -1,4 +1,4 @@
-import { GcpLogger } from 'src';
+import { GcpLogger } from '../';
 
 describe('Gcp log test', () => {
   it('should log', () => {
