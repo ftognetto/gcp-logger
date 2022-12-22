@@ -7,11 +7,12 @@ let logger: winston.Logger;
 
 // Consente di estrarre l'utente richiedente dalla request e scriverlo nei log
 let _extractUserFromRequest: (req: Request) => any | undefined;
+let _serviceName: string | undefined;
 
 // Inizializzazione del logger
 const _initLogger = () => {
   // serviceContext se è valorizzato riporta gli errori anche su Error Reporting
-  const serviceContext = process.env.SERVICE_NAME ? { service: process.env.SERVICE_NAME } : undefined;
+  const serviceContext = _serviceName ? { service: _serviceName } : undefined;
 
   loggingWinston = new LoggingWinston({
     serviceContext,
@@ -102,7 +103,8 @@ export const GcpLogger = {
   error(log: Error | Object, req?: Request, reqUser?: any): void {
     _handleLog(log, 'ERROR', req, reqUser);
   },
-  init(config: { extractUserFromRequest: (req: Request) => any }): void {
+  init(config: { serviceName: string; extractUserFromRequest: (req: Request) => any }): void {
+    _serviceName = config.serviceName;
     if (config.extractUserFromRequest) {
       _extractUserFromRequest = config.extractUserFromRequest;
     }
